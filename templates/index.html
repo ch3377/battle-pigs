@@ -354,35 +354,42 @@ socket.on('battle_start', d=>{
   initBattle(); show('battle');
 });
 socket.on('fire_result', d=>{
-  currentTurn=d.turn;
-  if(d.shooter===myIdx){
-    // I fired at opponent's farm
-    myShots[d.r+','+d.c]=d.hit?'hit':'miss';
-    addLog(d.hit ? '>> You hit something!' : '>> You missed.', d.hit?'good':'');
-    if(d.sunk){
-      d.sunk_cells.forEach(([r,c])=>revealedSunk[r+','+c]=PIG_MAP[d.sunk]);
-      addLog('>>> You released ' + d.sunk_name + '! ' + PIG_MAP[d.sunk].emoji, 'sunk');
+  try {
+    currentTurn=d.turn;
+    if(d.shooter===myIdx){
+      // I fired at opponent's farm
+      myShots[d.r+','+d.c]=d.hit?'hit':'miss';
+      addLog(d.hit ? '>> You hit something!' : '>> You missed.', d.hit?'good':'');
+      if(d.sunk && d.sunk_cells){
+        d.sunk_cells.forEach(([r,c])=>{
+          revealedSunk[r+','+c]=PIG_MAP[d.sunk];
+          myShots[r+','+c]='hit'; // ensure all sunk cells marked as hit
+        });
+        addLog('>>> You released ' + d.sunk_name + '! ' + PIG_MAP[d.sunk].emoji, 'sunk');
+      }
+    } else {
+      // Opponent fired at MY farm
+      enemyHits.add(d.r+','+d.c);
+      addLog(d.hit ? '<< '+oppName+' hit your pig!' : '<< '+oppName+' missed your farm.', d.hit?'bad':'');
+      if(d.sunk && d.sunk_cells){
+        d.sunk_cells.forEach(([r,c])=>{
+          mySunkenCells[r+','+c]=d.sunk;
+          enemyHits.add(r+','+c); // ensure all sunk cells tracked as hit
+        });
+        addLog('<<< '+oppName+' released your '+d.sunk_name+'!', 'sunk');
+      }
     }
-  } else {
-    // Opponent fired at MY farm
-    enemyHits.add(d.r+','+d.c);
-    addLog(d.hit ? '<< '+oppName+' hit your pig!' : '<< '+oppName+' missed your farm.', d.hit?'bad':'');
-    if(d.sunk){
-      // Mark all cells of my sunk pig
-      d.sunk_cells.forEach(([r,c])=>{ mySunkenCells[r+','+c]=d.sunk; });
-      addLog('<<< '+oppName+' released your '+d.sunk_name+'!', 'sunk');
+    if(d.game_over){
+      gamePhase='finished';
+      setTimeout(()=>{
+        document.getElementById('resultText').innerHTML =
+          d.shooter===myIdx
+            ? '🎉 You Win! 🐷<br>All pigs released!'
+            : '😢 You Lost!<br>'+d.winner_name+' found all your pigs!';
+        show('result');
+      }, 800);
     }
-  }
-  if(d.game_over){
-    gamePhase='finished';
-    setTimeout(()=>{
-      document.getElementById('resultText').innerHTML =
-        d.shooter===myIdx
-          ? '🎉 You Win! 🐷<br>All pigs released!'
-          : '😢 You Lost!<br>'+d.winner_name+' found all your pigs!';
-      show('result');
-    }, 800);
-  }
+  } catch(e){ console.error('fire_result error:', e); }
   renderBattle();
 });
 socket.on('opponent_left', d=>{
