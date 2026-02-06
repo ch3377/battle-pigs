@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Battle Pigs</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#6ab04c;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;color:#333}
+.screen{display:none;flex-direction:column;align-items:center;width:100%;max-width:960px;padding:16px}
+.screen.active{display:flex}
+.panel{background:#fff8f0;border-radius:16px;padding:24px;box-shadow:0 4px 20px rgba(0,0,0,.2);
+  text-align:center;width:100%;max-width:480px;margin:8px}
+h1{font-size:2em;margin-bottom:8px}
+h2{margin-bottom:12px}
+h3{margin-bottom:6px;font-size:1em}
+input{padding:10px 16px;font-size:1em;border:2px solid #ddd;border-radius:8px;width:220px;margin:4px}
+input:focus{border-color:#ff9eb5;outline:none}
+.btn{padding:10px 24px;font-size:1em;border:none;border-radius:8px;cursor:pointer;margin:6px;
+  font-weight:bold;transition:transform .1s}
+.btn:hover{transform:scale(1.05)}
+.btn-pink{background:#ff9eb5;color:#fff}
+.btn-green{background:#78c850;color:#fff}
+.btn-gray{background:#aaa;color:#fff}
+.room-code{font-size:2.5em;font-weight:bold;color:#ff6b8a;letter-spacing:8px;margin:12px 0}
+.error{color:#e74c3c;font-weight:bold;margin:8px}
+
+/* Pig selector */
+.pig-list{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px 0}
+.pig-btn{padding:8px 12px;border-radius:10px;cursor:pointer;border:3px solid transparent;
+  font-size:.85em;font-weight:bold;transition:all .15s;user-select:none}
+.pig-btn.selected{border-color:#333;transform:scale(1.08)}
+.pig-btn.placed{opacity:.6}
+.pig-btn.placed.selected{opacity:1}
+
+/* Grid */
+.grid-wrap{display:inline-block;background:#8B6914;padding:6px;border-radius:8px;margin:8px}
+.grid{display:grid;grid-template-columns:repeat(10,36px);grid-template-rows:repeat(10,36px);gap:2px}
+.cell{width:36px;height:36px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;transition:background .1s;user-select:none}
+.cell-empty{background:#a8d5a2}
+.cell-pig1{background:#FFB6C1}
+.cell-pig2{background:#FF69B4}
+.cell-pig3{background:#FFF0F5}
+.cell-pig4{background:#C8A2C8}
+.cell-pig5{background:#FFDAB9}
+.cell-hit{background:#ff4444}
+.cell-miss{background:#87CEEB}
+.cell-fog{background:#5a8a3c;cursor:crosshair}
+.cell-fog:hover{background:#4a7a2c}
+.cell-sunk{background:#d88}
+.preview-ok{background:#7fff7f !important}
+.preview-bad{background:#ff7f7f !important}
+
+/* Battle layout */
+.battle-row{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;align-items:flex-start}
+.board-panel{text-align:center}
+#status{font-size:1.3em;font-weight:bold;margin:8px;padding:8px 20px;border-radius:10px;background:#fff8f0}
+#log{max-height:100px;overflow-y:auto;font-size:.85em;margin:8px;text-align:left;width:90%;max-width:500px}
+.log-entry{padding:2px 0}
+
+/* Result */
+.result-text{font-size:2em;margin:16px}
+</style>
+</head>
+<body>
+
+<!-- LOBBY -->
+<div id="s-lobby" class="screen active">
+  <div class="panel">
+    <h1>🐷 Battle Pigs 🐷</h1>
+    <p style="margin-bottom:16px">Hide your pigs. Find theirs. Oink!</p>
+    <input id="inName" placeholder="Your name" maxlength="12"><br>
+    <button class="btn btn-pink" onclick="createRoom()">Create Room</button>
+    <hr style="margin:16px 0">
+    <input id="inCode" placeholder="Room code" maxlength="4" style="text-transform:uppercase"><br>
+    <button class="btn btn-green" onclick="joinRoom()">Join Room</button>
+    <div id="errLobby" class="error"></div>
+  </div>
+</div>
+
+<!-- WAITING -->
+<div id="s-waiting" class="screen">
+  <div class="panel">
+    <h2>Room Created!</h2>
+    <p>Share this code with your friend:</p>
+    <div class="room-code" id="dispCode"></div>
+    <p>Waiting for opponent to join...</p>
+  </div>
+</div>
+
+<!-- PLACEMENT -->
+<div id="s-place" class="screen">
+  <div class="panel" style="max-width:600px">
+    <h2>Place Your Pigs on the Farm!</h2>
+    <p id="placeVs" style="margin-bottom:8px"></p>
+    <div class="pig-list" id="pigList"></div>
+    <div>
+      <button class="btn btn-gray" id="btnRotate" onclick="toggleRotation()">Horizontal ↔</button>
+      <button class="btn btn-gray" onclick="clearAll()">Clear All</button>
+    </div>
+    <div class="grid-wrap"><div class="grid" id="placeGrid"></div></div>
+    <button class="btn btn-pink" id="btnReady" onclick="sendReady()" disabled>Ready!</button>
+    <div id="placeStatus" style="margin-top:6px"></div>
+  </div>
+</div>
+
+<!-- BATTLE -->
+<div id="s-battle" class="screen">
+  <div id="status">...</div>
+  <div class="battle-row">
+    <div class="board-panel">
+      <h3 id="myLabel">Your Farm</h3>
+      <div class="grid-wrap"><div class="grid" id="myGrid"></div></div>
+    </div>
+    <div class="board-panel">
+      <h3 id="enemyLabel">Enemy Farm</h3>
+      <div class="grid-wrap"><div class="grid" id="enemyGrid"></div></div>
+    </div>
+  </div>
+  <div id="log"></div>
+</div>
+
+<!-- RESULT -->
+<div id="s-result" class="screen">
+  <div class="panel">
+    <div class="result-text" id="resultText"></div>
+    <button class="btn btn-pink" onclick="playAgain()">Play Again</button>
+    <button class="btn btn-gray" onclick="backToLobby()">Leave</button>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const PIGS = [
+  {id:1, name:'Baozhu Pig', size:5, emoji:'👑', color:'#FFB6C1'},
+  {id:2, name:'Zhubao Pig', size:4, emoji:'💎', color:'#FF69B4'},
+  {id:3, name:'White Pig',  size:3, emoji:'🐷', color:'#FFF0F5'},
+  {id:4, name:'Black Pig',  size:3, emoji:'🐗', color:'#C8A2C8'},
+  {id:5, name:'Xiao Zhu Tou',size:2,emoji:'🐽', color:'#FFDAB9'},
+];
+const PIG_MAP = Object.fromEntries(PIGS.map(p=>[p.id,p]));
+
+let socket = io();
+let myIdx = -1, oppName = '', myBoard = [], orientation = 'h';
+let selectedPig = null, placements = {};
+let myShots = {}, enemyHits = new Set(), revealedSunk = {};
+let gamePhase = 'lobby', currentTurn = 0;
+
+// --- Screen ---
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active'); }
+
+// --- Lobby ---
+function createRoom(){
+  const name = document.getElementById('inName').value.trim();
+  if(!name) return showErr('Enter your name!');
+  socket.emit('create_room',{name});
+}
+function joinRoom(){
+  const name = document.getElementById('inName').value.trim();
+  const code = document.getElementById('inCode').value.trim().toUpperCase();
+  if(!name) return showErr('Enter your name!');
+  if(!code) return showErr('Enter room code!');
+  socket.emit('join_game',{name,code});
+}
+function showErr(m){ document.getElementById('errLobby').textContent=m; }
+
+// --- Placement ---
+let placeCells = [];
+function initPlacement(){
+  myBoard = Array.from({length:10},()=>Array(10).fill(0));
+  placements = {}; selectedPig = null; orientation = 'h';
+  const list = document.getElementById('pigList');
+  list.innerHTML = '';
+  PIGS.forEach(p=>{
+    const b = document.createElement('div');
+    b.className = 'pig-btn'; b.dataset.id = p.id;
+    b.style.background = p.color;
+    b.textContent = `${p.emoji} ${p.name} (${p.size})`;
+    b.onclick = ()=> selectPig(p.id);
+    list.appendChild(b);
+  });
+  const grid = document.getElementById('placeGrid');
+  grid.innerHTML = ''; placeCells = [];
+  for(let r=0;r<10;r++){ placeCells[r]=[];
+    for(let c=0;c<10;c++){
+      const d = document.createElement('div');
+      d.className = 'cell cell-empty';
+      d.addEventListener('click',()=>onPlaceClick(r,c));
+      d.addEventListener('mouseover',()=>showPreview(r,c));
+      d.addEventListener('mouseout',clearPreview);
+      grid.appendChild(d); placeCells[r][c]=d;
+    }
+  }
+  renderPlaceGrid();
+}
+function selectPig(id){
+  selectedPig = (selectedPig===id) ? null : id;
+  document.querySelectorAll('.pig-btn').forEach(b=>{
+    b.classList.toggle('selected', +b.dataset.id===selectedPig);
+    b.classList.toggle('placed', !!placements[+b.dataset.id]);
+  });
+}
+function toggleRotation(){
+  orientation = orientation==='h'?'v':'h';
+  document.getElementById('btnRotate').textContent = orientation==='h'?'Horizontal ↔':'Vertical ↕';
+}
+function getCells(r,c,dir,size){
+  const cells=[];
+  for(let i=0;i<size;i++){
+    const cr=dir==='v'?r+i:r, cc=dir==='h'?c+i:c;
+    if(cr<0||cr>=10||cc<0||cc>=10) return null;
+    cells.push([cr,cc]);
+  } return cells;
+}
+function onPlaceClick(r,c){
+  // If clicking on an existing pig, select it
+  if(myBoard[r][c]>0 && !selectedPig){
+    selectPig(myBoard[r][c]); return;
+  }
+  if(!selectedPig) return;
+  const pig = PIG_MAP[selectedPig];
+  const cells = getCells(r,c,orientation,pig.size);
+  if(!cells) return;
+  if(!cells.every(([cr,cc])=>myBoard[cr][cc]===0||myBoard[cr][cc]===selectedPig)) return;
+  // Remove old placement
+  removePig(selectedPig);
+  // Place
+  cells.forEach(([cr,cc])=>myBoard[cr][cc]=selectedPig);
+  placements[selectedPig]={r,c,dir:orientation};
+  renderPlaceGrid();
+  // Auto-select next unplaced pig
+  const next = PIGS.find(p=>!placements[p.id]);
+  selectPig(next ? next.id : null);
+  document.getElementById('btnReady').disabled = Object.keys(placements).length<5;
+}
+function removePig(id){
+  for(let r=0;r<10;r++) for(let c=0;c<10;c++) if(myBoard[r][c]===id) myBoard[r][c]=0;
+  delete placements[id];
+}
+function clearAll(){
+  myBoard = Array.from({length:10},()=>Array(10).fill(0));
+  placements = {}; selectedPig = null;
+  renderPlaceGrid();
+  document.getElementById('btnReady').disabled = true;
+  document.querySelectorAll('.pig-btn').forEach(b=>{b.classList.remove('selected','placed');});
+}
+function renderPlaceGrid(){
+  for(let r=0;r<10;r++) for(let c=0;c<10;c++){
+    const v = myBoard[r][c], d = placeCells[r][c];
+    if(v>0){ d.className='cell cell-pig'+v; d.textContent=PIG_MAP[v].emoji; }
+    else { d.className='cell cell-empty'; d.textContent=''; }
+  }
+}
+function showPreview(r,c){
+  clearPreview();
+  if(!selectedPig) return;
+  const pig = PIG_MAP[selectedPig];
+  const cells = getCells(r,c,orientation,pig.size);
+  if(!cells) return;
+  const ok = cells.every(([cr,cc])=>myBoard[cr][cc]===0||myBoard[cr][cc]===selectedPig);
+  cells.forEach(([cr,cc])=>placeCells[cr][cc].classList.add(ok?'preview-ok':'preview-bad'));
+}
+function clearPreview(){
+  for(let r=0;r<10;r++) for(let c=0;c<10;c++)
+    placeCells[r][c].classList.remove('preview-ok','preview-bad');
+}
+function sendReady(){
+  socket.emit('place_pigs',{board:myBoard});
+  document.getElementById('placeStatus').textContent='Waiting for opponent...';
+  document.getElementById('btnReady').disabled=true;
+}
+
+// --- Battle ---
+let myCells=[], enemyCells=[];
+function initBattle(){
+  myShots={}; enemyHits=new Set(); revealedSunk={};
+  document.getElementById('log').innerHTML='';
+  document.getElementById('myLabel').textContent='Your Farm';
+  document.getElementById('enemyLabel').textContent=oppName+"'s Farm";
+  [['myGrid',myCells,false],['enemyGrid',enemyCells,true]].forEach(([id,arr,clickable])=>{
+    const grid=document.getElementById(id); grid.innerHTML='';
+    for(let r=0;r<10;r++){ arr[r]=[];
+      for(let c=0;c<10;c++){
+        const d=document.createElement('div'); d.className='cell';
+        if(clickable) d.addEventListener('click',()=>fireAt(r,c));
+        grid.appendChild(d); arr[r][c]=d;
+      }
+    }
+  });
+  renderBattle();
+}
+function fireAt(r,c){
+  if(gamePhase!=='playing'||currentTurn!==myIdx) return;
+  const k=r+','+c;
+  if(myShots[k]!==undefined) return;
+  socket.emit('fire',{r,c});
+}
+function renderBattle(){
+  const st = document.getElementById('status');
+  if(gamePhase==='playing'){
+    st.textContent = currentTurn===myIdx ? "Your turn! Pick a cell to attack!" : "Opponent's turn...";
+    st.style.background = currentTurn===myIdx ? '#fff8f0' : '#eee';
+  }
+  // My grid
+  for(let r=0;r<10;r++) for(let c=0;c<10;c++){
+    const d=myCells[r][c], v=myBoard[r][c], hit=enemyHits.has(r+','+c);
+    if(hit && v>0){ d.className='cell cell-hit'; d.textContent='💥'; }
+    else if(hit){ d.className='cell cell-miss'; d.textContent='💦'; }
+    else if(v>0){ d.className='cell cell-pig'+v; d.textContent=PIG_MAP[v].emoji; }
+    else{ d.className='cell cell-empty'; d.textContent=''; }
+  }
+  // Enemy grid
+  for(let r=0;r<10;r++) for(let c=0;c<10;c++){
+    const d=enemyCells[r][c], k=r+','+c, shot=myShots[k];
+    const sunk = revealedSunk[k];
+    if(sunk){ d.className='cell cell-sunk'; d.textContent=PIG_MAP[sunk].emoji; }
+    else if(shot==='hit'){ d.className='cell cell-hit'; d.textContent='💥'; }
+    else if(shot==='miss'){ d.className='cell cell-miss'; d.textContent='💦'; }
+    else{ d.className='cell cell-fog'; d.textContent=''; }
+  }
+}
+function addLog(msg){
+  const log=document.getElementById('log');
+  const e=document.createElement('div'); e.className='log-entry'; e.textContent=msg;
+  log.appendChild(e); log.scrollTop=log.scrollHeight;
+}
+
+// --- Socket Events ---
+socket.on('error', d=>{ showErr(d.msg); });
+socket.on('room_created', d=>{
+  document.getElementById('dispCode').textContent=d.code;
+  show('waiting');
+});
+socket.on('game_start', d=>{
+  myIdx=d.you; oppName=d.opponent;
+  document.getElementById('placeVs').textContent='You vs '+oppName;
+  initPlacement(); show('place');
+});
+socket.on('wait_for_opponent', ()=>{
+  document.getElementById('placeStatus').textContent='Pigs placed! Waiting for '+oppName+'...';
+});
+socket.on('battle_start', d=>{
+  gamePhase='playing'; currentTurn=d.turn;
+  initBattle(); show('battle');
+});
+socket.on('fire_result', d=>{
+  currentTurn=d.turn;
+  if(d.shooter===myIdx){
+    myShots[d.r+','+d.c]=d.hit?'hit':'miss';
+    addLog(d.hit?'You hit!':'You missed.');
+    if(d.sunk){
+      d.sunk_cells.forEach(([r,c])=>revealedSunk[r+','+c]=PIG_MAP[d.sunk]);
+      addLog('You released '+d.sunk_name+'! '+PIG_MAP[d.sunk].emoji);
+    }
+  } else {
+    enemyHits.add(d.r+','+d.c);
+    addLog(d.hit?oppName+' hit your pig!':oppName+' missed.');
+    if(d.sunk) addLog(oppName+' released your '+d.sunk_name+'!');
+  }
+  if(d.game_over){
+    gamePhase='finished';
+    const won = d.winner_name === (myIdx===0?
+      document.getElementById('inName').value.trim():document.getElementById('inName').value.trim());
+    setTimeout(()=>{
+      document.getElementById('resultText').innerHTML =
+        d.shooter===myIdx
+          ? '🎉 You Win! 🐷<br>All pigs released!'
+          : '😢 You Lost!<br>'+d.winner_name+' found all your pigs!';
+      show('result');
+    }, 800);
+  }
+  renderBattle();
+});
+socket.on('opponent_left', d=>{
+  alert(d.name+' left the game!');
+  show('lobby');
+});
+
+function playAgain(){ socket.emit('play_again'); }
+function backToLobby(){ location.reload(); }
+</script>
+</body>
+</html>
