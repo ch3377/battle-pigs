@@ -41,9 +41,9 @@ input:focus{border-color:#ff9eb5;outline:none}
   font-size:16px;cursor:pointer;transition:background .1s;user-select:none}
 .cell-empty{background:#a8d5a2}
 .cell-pig1{background:#FFB6C1}
-.cell-pig2{background:#FF69B4}
+.cell-pig2{background:#87CEFA}
 .cell-pig3{background:#FFF0F5}
-.cell-pig4{background:#C8A2C8}
+.cell-pig4{background:#D2B48C}
 .cell-pig5{background:#FFDAB9}
 .cell-hit{background:#ff4444}
 .cell-miss{background:#87CEEB}
@@ -134,11 +134,11 @@ input:focus{border-color:#ff9eb5;outline:none}
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 const PIGS = [
-  {id:1, name:'Baozhu Pig', size:5, emoji:'👑', color:'#FFB6C1'},
-  {id:2, name:'Zhubao Pig', size:4, emoji:'💎', color:'#FF69B4'},
-  {id:3, name:'White Pig',  size:3, emoji:'🐷', color:'#FFF0F5'},
-  {id:4, name:'Black Pig',  size:3, emoji:'🐗', color:'#C8A2C8'},
-  {id:5, name:'Xiao Zhu Tou',size:2,emoji:'🐽', color:'#FFDAB9'},
+  {id:1, name:'Baozhu', size:5, emoji:'🐷', label:'Baozhu (Wifey Pig)', color:'#FFB6C1'},
+  {id:2, name:'Zhubao', size:4, emoji:'🐽', label:'Zhubao (Hubby Pig)', color:'#87CEFA'},
+  {id:3, name:'White Pig',  size:3, emoji:'🐰', label:'White Pig', color:'#FFF0F5'},
+  {id:4, name:'Black Pig',  size:3, emoji:'🐻', label:'Black Pig', color:'#D2B48C'},
+  {id:5, name:'Xiao Zhu Tou',size:2,emoji:'🍼', label:'Xiao Zhu Tou (Baby)', color:'#FFDAB9'},
 ];
 const PIG_MAP = Object.fromEntries(PIGS.map(p=>[p.id,p]));
 
@@ -178,7 +178,7 @@ function initPlacement(){
     const b = document.createElement('div');
     b.className = 'pig-btn'; b.dataset.id = p.id;
     b.style.background = p.color;
-    b.textContent = `${p.emoji} ${p.name} (${p.size})`;
+    b.textContent = `${p.emoji} ${p.label||p.name} [${p.size}]`;
     b.onclick = ()=> selectPig(p.id);
     list.appendChild(b);
   });

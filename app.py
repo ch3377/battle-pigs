@@ -12,11 +12,11 @@ rooms = {}
 sid_to_room = {}
 
 PIGS = [
-    {'id': 1, 'name': 'Baozhu Pig', 'size': 5},
-    {'id': 2, 'name': 'Zhubao Pig', 'size': 4},
+    {'id': 1, 'name': 'Baozhu (Wifey Pig)', 'size': 5},
+    {'id': 2, 'name': 'Zhubao (Hubby Pig)', 'size': 4},
     {'id': 3, 'name': 'White Pig', 'size': 3},
     {'id': 4, 'name': 'Black Pig', 'size': 3},
-    {'id': 5, 'name': 'Xiao Zhu Tou', 'size': 2},
+    {'id': 5, 'name': 'Xiao Zhu Tou (Baby)', 'size': 2},
 ]
 EXPECTED = {p['id']: p['size'] for p in PIGS}
 
