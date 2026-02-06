@@ -49,7 +49,7 @@ input:focus{border-color:#ff9eb5;outline:none}
 .cell-miss{background:#87CEEB}
 .cell-fog{background:#5a8a3c;cursor:crosshair}
 .cell-fog:hover{background:#4a7a2c}
-.cell-sunk{background:#d88}
+.cell-sunk{background:#fce4ec}
 .preview-ok{background:#7fff7f !important}
 .preview-bad{background:#ff7f7f !important}
 
@@ -167,16 +167,21 @@ function pigSVG(head, ear, acc, sz) {
     ${extra}</svg>`;
 }
 
-// --- Hit: cartoon mud splat ---
+// --- Hit: cute bonked pig with bump ---
 const SVG_HIT = `<svg viewBox="0 0 28 28" width="28" height="28">
-  <ellipse cx="14" cy="16" rx="11" ry="8" fill="#c8763a"/>
-  <ellipse cx="14" cy="15" rx="8" ry="6" fill="#e8954a"/>
-  <circle cx="7" cy="10" r="3" fill="#c8763a"/>
-  <circle cx="20" cy="8" r="2.5" fill="#c8763a"/>
-  <circle cx="14" cy="6" r="2.8" fill="#d68844"/>
-  <circle cx="22" cy="14" r="2" fill="#c8763a"/>
-  <circle cx="14" cy="15" r="3" fill="#f0aa55"/>
-  <path d="M11,14Q14,17 17,14" fill="none" stroke="#a06030" stroke-width="1" stroke-linecap="round"/>
+  <ellipse cx="7" cy="7" rx="3.5" ry="3" fill="#e0a0a0"/>
+  <ellipse cx="21" cy="7" rx="3.5" ry="3" fill="#e0a0a0"/>
+  <circle cx="14" cy="15" r="9.5" fill="#f0b0b0"/>
+  <circle cx="15" cy="4" r="3.5" fill="#ee7777"/>
+  <line x1="13" y1="1" x2="17" y2="1" stroke="#eeaa33" stroke-width="1" stroke-linecap="round"/>
+  <line x1="12" y1="2.5" x2="18" y2="0" stroke="#eeaa33" stroke-width="1" stroke-linecap="round"/>
+  <line x1="17" y1="3" x2="19" y2="1" stroke="#eeaa33" stroke-width="1" stroke-linecap="round"/>
+  <path d="M8,12 Q10,14 12,12" fill="none" stroke="#555" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M16,12 Q18,14 20,12" fill="none" stroke="#555" stroke-width="1.2" stroke-linecap="round"/>
+  <ellipse cx="14" cy="19" rx="4.8" ry="3.2" fill="#e0a0a0"/>
+  <circle cx="12" cy="19" r="1" fill="#555"/>
+  <circle cx="16" cy="19" r="1" fill="#555"/>
+  <path d="M11,22.5Q14,24 17,22.5" fill="none" stroke="#c77" stroke-width=".7" stroke-linecap="round"/>
 </svg>`;
 
 // --- Miss: little dust poof cloud ---
