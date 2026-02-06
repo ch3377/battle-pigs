@@ -43,7 +43,7 @@ input:focus{border-color:#ff9eb5;outline:none}
 .cell-pig1{background:#FFB6C1}
 .cell-pig2{background:#87CEFA}
 .cell-pig3{background:#FFF0F5}
-.cell-pig4{background:#D2B48C}
+.cell-pig4{background:#c8c8c8}
 .cell-pig5{background:#FFDAB9}
 .cell-hit{background:#ff4444}
 .cell-miss{background:#87CEEB}
@@ -133,12 +133,51 @@ input:focus{border-color:#ff9eb5;outline:none}
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
+// --- Cute Pig SVG Generator ---
+function pigSVG(head, ear, acc, sz) {
+  sz = sz || 28;
+  let extra = '';
+  if(acc==='bow')
+    extra=`<path d="M7,2Q10,-1 11,3" fill="#ff4466" stroke="#cc2244" stroke-width=".4"/>
+           <path d="M15,3Q16,-1 19,2" fill="#ff4466" stroke="#cc2244" stroke-width=".4"/>
+           <circle cx="13" cy="2.5" r="1.3" fill="#ff6688"/>`;
+  if(acc==='tie')
+    extra=`<polygon points="14,20 11,23 14,25 17,23" fill="#4488dd"/>
+           <polygon points="14,20 12,22 14,21 16,22" fill="#3366bb"/>`;
+  if(acc==='blush')
+    extra=`<ellipse cx="6.5" cy="15" rx="2.5" ry="1.5" fill="#faa" opacity=".45"/>
+           <ellipse cx="21.5" cy="15" rx="2.5" ry="1.5" fill="#faa" opacity=".45"/>`;
+  if(acc==='patch')
+    extra=`<circle cx="8" cy="10" r="2.5" fill="rgba(60,60,60,.2)"/>
+           <circle cx="19" cy="13" r="1.8" fill="rgba(60,60,60,.15)"/>`;
+  if(acc==='bib')
+    extra=`<path d="M9,20Q14,26 19,20" fill="#ffeedd" stroke="#ddccaa" stroke-width=".5"/>
+           <circle cx="14" cy="22" r="1" fill="#ffaaaa"/>`;
+  return `<svg viewBox="0 0 28 28" width="${sz}" height="${sz}">
+    <ellipse cx="7" cy="5.5" rx="4" ry="3.8" fill="${ear}"/>
+    <ellipse cx="21" cy="5.5" rx="4" ry="3.8" fill="${ear}"/>
+    <circle cx="14" cy="14" r="10.5" fill="${head}"/>
+    <circle cx="10" cy="11.5" r="2" fill="#fff"/><circle cx="10" cy="11.5" r="1.3" fill="#333"/>
+    <circle cx="18" cy="11.5" r="2" fill="#fff"/><circle cx="18" cy="11.5" r="1.3" fill="#333"/>
+    <circle cx="10.6" cy="11" r=".5" fill="#fff"/><circle cx="18.6" cy="11" r=".5" fill="#fff"/>
+    <ellipse cx="14" cy="17.5" rx="5.5" ry="3.8" fill="${ear}"/>
+    <circle cx="11.5" cy="17.5" r="1.2" fill="#555"/>
+    <circle cx="16.5" cy="17.5" r="1.2" fill="#555"/>
+    <path d="M11,21Q14,23.5 17,21" fill="none" stroke="#c55" stroke-width=".8" stroke-linecap="round"/>
+    ${extra}</svg>`;
+}
+
 const PIGS = [
-  {id:1, name:'Baozhu', size:5, emoji:'🐷', label:'Baozhu (Wifey Pig)', color:'#FFB6C1'},
-  {id:2, name:'Zhubao', size:4, emoji:'🐽', label:'Zhubao (Hubby Pig)', color:'#87CEFA'},
-  {id:3, name:'White Pig',  size:3, emoji:'🐰', label:'White Pig', color:'#FFF0F5'},
-  {id:4, name:'Black Pig',  size:3, emoji:'🐻', label:'Black Pig', color:'#D2B48C'},
-  {id:5, name:'Xiao Zhu Tou',size:2,emoji:'🍼', label:'Xiao Zhu Tou (Baby)', color:'#FFDAB9'},
+  {id:1, name:'Baozhu', size:5, label:'Baozhu (Wifey)', color:'#FFB6C1',
+   svg:pigSVG('#FFB6C1','#e8909a','bow')},
+  {id:2, name:'Zhubao', size:4, label:'Zhubao (Hubby)', color:'#87CEFA',
+   svg:pigSVG('#87CEFA','#5eaade','tie')},
+  {id:3, name:'White Pig', size:3, label:'White Pig', color:'#FFF0F5',
+   svg:pigSVG('#fff0f0','#f0d0d0','blush')},
+  {id:4, name:'Black Pig', size:3, label:'Black Pig', color:'#b0b0b0',
+   svg:pigSVG('#aaa','#888','patch')},
+  {id:5, name:'Xiao Zhu Tou', size:2, label:'Baby Pig', color:'#FFDAB9',
+   svg:pigSVG('#FFDAB9','#e8b896','bib')},
 ];
 const PIG_MAP = Object.fromEntries(PIGS.map(p=>[p.id,p]));
 
@@ -178,7 +217,7 @@ function initPlacement(){
     const b = document.createElement('div');
     b.className = 'pig-btn'; b.dataset.id = p.id;
     b.style.background = p.color;
-    b.textContent = `${p.emoji} ${p.label||p.name} [${p.size}]`;
+    b.innerHTML = pigSVG(p.color, p.color, '', 22) + ` ${p.label} [${p.size}]`;
     b.onclick = ()=> selectPig(p.id);
     list.appendChild(b);
   });
@@ -250,8 +289,8 @@ function clearAll(){
 function renderPlaceGrid(){
   for(let r=0;r<10;r++) for(let c=0;c<10;c++){
     const v = myBoard[r][c], d = placeCells[r][c];
-    if(v>0){ d.className='cell cell-pig'+v; d.textContent=PIG_MAP[v].emoji; }
-    else { d.className='cell cell-empty'; d.textContent=''; }
+    if(v>0){ d.className='cell cell-pig'+v; d.innerHTML=PIG_MAP[v].svg; }
+    else { d.className='cell cell-empty'; d.innerHTML=''; }
   }
 }
 function showPreview(r,c){
@@ -309,20 +348,20 @@ function renderBattle(){
   for(let r=0;r<10;r++) for(let c=0;c<10;c++){
     const d=myCells[r][c], v=myBoard[r][c], k=r+','+c;
     const hit=enemyHits.has(k), sunk=mySunkenCells[k];
-    if(sunk){ d.className='cell cell-sunk'; d.textContent='🐾'; }
-    else if(hit && v>0){ d.className='cell cell-hit'; d.textContent='💥'; }
-    else if(hit){ d.className='cell cell-miss'; d.textContent='💦'; }
-    else if(v>0){ d.className='cell cell-pig'+v; d.textContent=PIG_MAP[v].emoji; }
-    else{ d.className='cell cell-empty'; d.textContent=''; }
+    if(sunk){ d.className='cell cell-sunk'; d.innerHTML='🐾'; }
+    else if(hit && v>0){ d.className='cell cell-hit'; d.innerHTML='💥'; }
+    else if(hit){ d.className='cell cell-miss'; d.innerHTML='💦'; }
+    else if(v>0){ d.className='cell cell-pig'+v; d.innerHTML=PIG_MAP[v].svg; }
+    else{ d.className='cell cell-empty'; d.innerHTML=''; }
   }
   // Enemy grid: show where I've fired
   for(let r=0;r<10;r++) for(let c=0;c<10;c++){
     const d=enemyCells[r][c], k=r+','+c, shot=myShots[k];
     const sunk = revealedSunk[k];
-    if(sunk){ d.className='cell cell-sunk'; d.textContent=sunk.emoji; }
-    else if(shot==='hit'){ d.className='cell cell-hit'; d.textContent='💥'; }
-    else if(shot==='miss'){ d.className='cell cell-miss'; d.textContent='💦'; }
-    else{ d.className='cell cell-fog'; d.textContent=''; }
+    if(sunk){ d.className='cell cell-sunk'; d.innerHTML=sunk.svg; }
+    else if(shot==='hit'){ d.className='cell cell-hit'; d.innerHTML='💥'; }
+    else if(shot==='miss'){ d.className='cell cell-miss'; d.innerHTML='💦'; }
+    else{ d.className='cell cell-fog'; d.innerHTML=''; }
   }
 }
 function addLog(msg, type){
@@ -365,7 +404,7 @@ socket.on('fire_result', d=>{
           revealedSunk[r+','+c]=PIG_MAP[d.sunk];
           myShots[r+','+c]='hit'; // ensure all sunk cells marked as hit
         });
-        addLog('>>> You released ' + d.sunk_name + '! ' + PIG_MAP[d.sunk].emoji, 'sunk');
+        addLog('>>> You released ' + d.sunk_name + '! 🎉', 'sunk');
       }
     } else {
       // Opponent fired at MY farm
