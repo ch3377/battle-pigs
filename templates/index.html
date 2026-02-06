@@ -275,8 +275,9 @@ function sendReady(){
 
 // --- Battle ---
 let myCells=[], enemyCells=[];
+let mySunkenCells = {};  // cells of MY pigs that opponent sunk: "r,c" -> pigId
 function initBattle(){
-  myShots={}; enemyHits=new Set(); revealedSunk={};
+  myShots={}; enemyHits=new Set(); revealedSunk={}; mySunkenCells={};
   document.getElementById('log').innerHTML='';
   document.getElementById('myLabel').textContent='Your Farm';
   document.getElementById('enemyLabel').textContent=oppName+"'s Farm";
@@ -304,15 +305,17 @@ function renderBattle(){
     st.textContent = currentTurn===myIdx ? "Your turn! Pick a cell to attack!" : "Opponent's turn...";
     st.style.background = currentTurn===myIdx ? '#fff8f0' : '#eee';
   }
-  // My grid
+  // My grid: show my pigs + where opponent hit me
   for(let r=0;r<10;r++) for(let c=0;c<10;c++){
-    const d=myCells[r][c], v=myBoard[r][c], hit=enemyHits.has(r+','+c);
-    if(hit && v>0){ d.className='cell cell-hit'; d.textContent='💥'; }
+    const d=myCells[r][c], v=myBoard[r][c], k=r+','+c;
+    const hit=enemyHits.has(k), sunk=mySunkenCells[k];
+    if(sunk){ d.className='cell cell-sunk'; d.textContent='☠️'; }
+    else if(hit && v>0){ d.className='cell cell-hit'; d.textContent='💥'; }
     else if(hit){ d.className='cell cell-miss'; d.textContent='💦'; }
     else if(v>0){ d.className='cell cell-pig'+v; d.textContent=PIG_MAP[v].emoji; }
     else{ d.className='cell cell-empty'; d.textContent=''; }
   }
-  // Enemy grid
+  // Enemy grid: show where I've fired
   for(let r=0;r<10;r++) for(let c=0;c<10;c++){
     const d=enemyCells[r][c], k=r+','+c, shot=myShots[k];
     const sunk = revealedSunk[k];
@@ -322,9 +325,13 @@ function renderBattle(){
     else{ d.className='cell cell-fog'; d.textContent=''; }
   }
 }
-function addLog(msg){
+function addLog(msg, type){
   const log=document.getElementById('log');
-  const e=document.createElement('div'); e.className='log-entry'; e.textContent=msg;
+  const e=document.createElement('div'); e.className='log-entry';
+  if(type==='good') e.style.color='#2ecc71';
+  if(type==='bad') e.style.color='#e74c3c';
+  if(type==='sunk') { e.style.color='#e74c3c'; e.style.fontWeight='bold'; e.style.fontSize='1.1em'; }
+  e.textContent=msg;
   log.appendChild(e); log.scrollTop=log.scrollHeight;
 }
 
@@ -349,21 +356,25 @@ socket.on('battle_start', d=>{
 socket.on('fire_result', d=>{
   currentTurn=d.turn;
   if(d.shooter===myIdx){
+    // I fired at opponent's farm
     myShots[d.r+','+d.c]=d.hit?'hit':'miss';
-    addLog(d.hit?'You hit!':'You missed.');
+    addLog(d.hit ? '>> You hit something!' : '>> You missed.', d.hit?'good':'');
     if(d.sunk){
       d.sunk_cells.forEach(([r,c])=>revealedSunk[r+','+c]=PIG_MAP[d.sunk]);
-      addLog('You released '+d.sunk_name+'! '+PIG_MAP[d.sunk].emoji);
+      addLog('>>> You released ' + d.sunk_name + '! ' + PIG_MAP[d.sunk].emoji, 'sunk');
     }
   } else {
+    // Opponent fired at MY farm
     enemyHits.add(d.r+','+d.c);
-    addLog(d.hit?oppName+' hit your pig!':oppName+' missed.');
-    if(d.sunk) addLog(oppName+' released your '+d.sunk_name+'!');
+    addLog(d.hit ? '<< '+oppName+' hit your pig!' : '<< '+oppName+' missed your farm.', d.hit?'bad':'');
+    if(d.sunk){
+      // Mark all cells of my sunk pig
+      d.sunk_cells.forEach(([r,c])=>{ mySunkenCells[r+','+c]=d.sunk; });
+      addLog('<<< '+oppName+' released your '+d.sunk_name+'!', 'sunk');
+    }
   }
   if(d.game_over){
     gamePhase='finished';
-    const won = d.winner_name === (myIdx===0?
-      document.getElementById('inName').value.trim():document.getElementById('inName').value.trim());
     setTimeout(()=>{
       document.getElementById('resultText').innerHTML =
         d.shooter===myIdx
